@@ -15,7 +15,7 @@ const DeployTokenForm = () => {
     setContractAddress("");
 
     try {
-      const response = await fetch("http://localhost:4000/deploy-dynamic-token", {
+      const response = await fetch("http://localhost:4000/create-token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

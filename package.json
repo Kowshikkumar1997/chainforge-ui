@@ -1,22 +1,33 @@
 {
   "name": "chainforge-ui",
   "version": "1.0.0",
-  "description": "This project was bootstrapped with Create React App",
-  "main": "index.js",
+  "private": true,
+  "description": "Frontend interface for ChainForge, a low-code platform for deploying and managing smart contracts and blockchain infrastructure.",
+  "author": "Kowshikkumar Makireddy",
+  "license": "MIT",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "blockchain",
+    "smart-contracts",
+    "ethereum",
+    "web3",
+    "infrastructure",
+    "low-code",
+    "hardhat",
+    "ethers",
+    "react",
+    "sepolia"
+  ],
   "dependencies": {
     "axios": "^1.12.2",
-    "firebase": "^11.8.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^7.10.1",
     "react-scripts": "^5.0.1"
   },
   "devDependencies": {

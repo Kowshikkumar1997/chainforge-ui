@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-
+import { API_BASE_URL } from "../config";
 /**
  * Deployment History
  *
@@ -9,8 +9,6 @@ import React, { useEffect, useState } from "react";
  * Each entry links directly to public blockchain explorers
  * to allow independent verification.
  */
-
-const API_BASE_URL = "http://localhost:4000";
 
 function shorten(value) {
   if (!value) return "-";
@@ -25,9 +23,15 @@ export default function Deployments() {
   useEffect(() => {
     async function loadDeployments() {
       try {
-        const res = await fetch(`${API_BASE_URL}/deployments`);
-        const data = await res.json();
-        setDeployments(data.deployments || []);
+       const res = await fetch(`${API_BASE_URL}/deployments`);
+
+if (!res.ok) {
+  const text = await res.text();
+  throw new Error(`HTTP ${res.status}: ${text}`);
+}
+
+const data = await res.json();
+setDeployments(data.deployments || []);
       } catch (err) {
         console.error(err);
         setError("Unable to load deployment history.");

@@ -3,7 +3,7 @@ import axios from "axios";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Dashboard from "./dashboard/Dashboard";
 import Deployments from "./pages/Deployments";
-
+import { API_BASE_URL } from "./config";
 /**
  * ChainForge Frontend
  *
@@ -13,8 +13,6 @@ import Deployments from "./pages/Deployments";
  * - Chain scaffold generation (project templates)
  * - Navigation to operational dashboards and audit history
  */
-
-const API_BASE_URL = "http://localhost:4000";
 
 const api = axios.create({
   baseURL: API_BASE_URL,

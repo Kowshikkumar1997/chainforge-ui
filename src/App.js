@@ -1,18 +1,29 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+
 import Dashboard from "./dashboard/Dashboard";
 import Deployments from "./pages/Deployments";
 import { API_BASE_URL } from "./config";
 
 /**
+ * ---------------------------------------------------------------------
  * ChainForge Frontend
+ * ---------------------------------------------------------------------
  *
- * Entry point for the ChainForge platform UI.
- * Provides:
- * - Token deployment (ERC20 / ERC721 / ERC1155)
- * - Chain scaffold generation (project templates)
- * - Navigation to operational dashboards and audit history
+ * Primary UI entry point for the ChainForge platform.
+ *
+ * Responsibilities:
+ * - ERC20 / ERC721 / ERC1155 token deployment
+ * - Optional feature composition (mintable, burnable, pausable)
+ * - Asynchronous deployment orchestration via backend
+ * - Deployment audit traceability
+ *
+ * Design principles:
+ * - Deterministic inputs
+ * - Explicit validation
+ * - Clear separation of concerns
+ * - No implicit side effects
  */
 
 const api = axios.create({
@@ -20,53 +31,58 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+/* ---------------------------------------------------------------------
+ * Home (Token Deployment & Chain Scaffold)
+ * ------------------------------------------------------------------- */
 function Home() {
-  // ---------- Token Type ----------
+  /* ---------------- Token Type ---------------- */
   const [tokenType, setTokenType] = useState("ERC20");
 
-  // ---------- Token Deployment ----------
+  /* ---------------- Token Parameters ---------------- */
   const [tokenName, setTokenName] = useState("");
   const [tokenSymbol, setTokenSymbol] = useState("");
+
+  // ERC20-specific
   const [initialSupply, setInitialSupply] = useState("");
   const [decimals, setDecimals] = useState("");
+
+  // ERC721 / ERC1155
   const [baseURI, setBaseURI] = useState("https://example.com/");
 
-  // ---------- Chain Scaffold ----------
+  /* ---------------- Optional Features ---------------- */
+  const [modules, setModules] = useState({
+    mintable: false,
+    burnable: false,
+    pausable: false,
+  });
+
+  /* ---------------- Chain Scaffold ---------------- */
   const [chainName, setChainName] = useState("");
   const [consensus, setConsensus] = useState("Proof of Authority");
 
-  // ---------- Modules ----------
-  const [modules, setModules] = useState({
-    governance: false,
-    tokenTransfer: false,
-    burnable: false,
-    pausable: false,
-    mintable: false,
-    accessControl: false,
-    ownable: false,
-  });
-
-  // ---------- Loading ----------
-  const [tokenLoading, setTokenLoading] = useState(false);
-  const [chainLoading, setChainLoading] = useState(false);
-
-  // ---------- Results ----------
-  const [response, setResponse] = useState("");
-  const [tokenResult, setTokenResult] = useState(null);
-  const [chainResult, setChainResult] = useState(null);
-
-  // ---------- Wallet ----------
+  /* ---------------- Wallet ---------------- */
   const [walletAddress, setWalletAddress] = useState(null);
   const [walletError, setWalletError] = useState("");
 
-  // ---------- Activity Log ----------
+  /* ---------------- Async State ---------------- */
+  const [tokenLoading, setTokenLoading] = useState(false);
+  const [chainLoading, setChainLoading] = useState(false);
+
+  /* ---------------- Results & Activity ---------------- */
+  const [response, setResponse] = useState("");
+  const [tokenResult, setTokenResult] = useState(null);
+  const [chainResult, setChainResult] = useState(null);
   const [activityLog, setActivityLog] = useState([]);
+
+  /* -------------------------------------------------------------------
+   * Handlers
+   * ----------------------------------------------------------------- */
 
   const handleCheckboxChange = (e) => {
     setModules({ ...modules, [e.target.name]: e.target.checked });
   };
 
-  // ---------- CONNECT WALLET ----------
+  /* ---------------- Wallet Connection ---------------- */
   const handleConnectWallet = async () => {
     if (!window.ethereum) {
       setWalletError("MetaMask is not available in this browser.");
@@ -84,15 +100,31 @@ function Home() {
     }
   };
 
-  // ---------- DEPLOY TOKEN ----------
+  /* ---------------- Deploy Token ---------------- */
   const handleTokenSubmit = async () => {
-    if (!tokenName.trim() || !tokenSymbol.trim()) {
-      setResponse("Token name and symbol are required.");
+    if (!tokenName.trim()) {
+      setResponse("Token name is required.");
       return;
     }
 
-    if (tokenType === "ERC20" && (!initialSupply || Number(initialSupply) <= 0)) {
-      setResponse("ERC20 initial supply must be a positive number.");
+    if (tokenType !== "ERC1155" && !tokenSymbol.trim()) {
+      setResponse("Token symbol is required.");
+      return;
+    }
+
+    if (tokenType === "ERC20") {
+      if (!initialSupply || Number(initialSupply) <= 0) {
+        setResponse("ERC20 initial supply must be a positive number.");
+        return;
+      }
+      if (decimals === "" || Number(decimals) < 0) {
+        setResponse("ERC20 decimals must be a non-negative number.");
+        return;
+      }
+    }
+
+    if (tokenType === "ERC1155" && !baseURI.trim()) {
+      setResponse("Base URI is required for ERC1155.");
       return;
     }
 
@@ -115,19 +147,19 @@ function Home() {
         payload.decimals = Number(decimals);
       }
 
-      if (tokenType === "ERC1155") {
+      if (tokenType === "ERC721" || tokenType === "ERC1155") {
         payload.baseURI = baseURI;
       }
 
       const res = await api.post("/create-token", payload);
 
       setTokenResult(res.data);
-      setResponse(res.data.message);
+      setResponse(res.data.message || "Deployment completed successfully.");
 
       setActivityLog((prev) => [
         {
           type: "token-deploy",
-          label: `Token deployed: ${tokenName} (${tokenType})`,
+          label: `Deployment completed: ${tokenName} (${tokenType})`,
           timestamp: new Date().toISOString(),
         },
         ...prev,
@@ -140,7 +172,7 @@ function Home() {
     }
   };
 
-  // ---------- GENERATE CHAIN SCAFFOLD ----------
+  /* ---------------- Generate Chain Scaffold ---------------- */
   const handleChainSubmit = async () => {
     if (!chainName.trim()) {
       setResponse("Project name is required.");
@@ -177,15 +209,18 @@ function Home() {
     }
   };
 
+  /* -------------------------------------------------------------------
+   * UI
+   * ----------------------------------------------------------------- */
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
       <div className="max-w-4xl w-full p-6 bg-white rounded shadow space-y-6">
-        {/* PLATFORM HEADER */}
+        {/* Header */}
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">ChainForge</h1>
             <p className="text-sm text-gray-600">
-              Low-code infrastructure platform for deploying and managing smart contracts.
+              Low-code infrastructure platform for deploying standardized smart contracts.
             </p>
           </div>
 
@@ -203,7 +238,7 @@ function Home() {
 
         {walletError && <p className="text-sm text-red-600">{walletError}</p>}
 
-        {/* DEPLOY TOKEN */}
+        {/* ---------------- Deploy Token ---------------- */}
         <div className="border rounded p-4 space-y-3">
           <h2 className="text-xl font-semibold">Deploy Token</h2>
 
@@ -224,12 +259,14 @@ function Home() {
             onChange={(e) => setTokenName(e.target.value)}
           />
 
-          <input
-            className="w-full p-2 border rounded"
-            placeholder="Token Symbol"
-            value={tokenSymbol}
-            onChange={(e) => setTokenSymbol(e.target.value)}
-          />
+          {tokenType !== "ERC1155" && (
+            <input
+              className="w-full p-2 border rounded"
+              placeholder="Token Symbol"
+              value={tokenSymbol}
+              onChange={(e) => setTokenSymbol(e.target.value)}
+            />
+          )}
 
           {tokenType === "ERC20" && (
             <>
@@ -242,7 +279,7 @@ function Home() {
               />
               <input
                 className="w-full p-2 border rounded"
-                placeholder="Decimals"
+                placeholder="Decimals (e.g. 18)"
                 type="number"
                 value={decimals}
                 onChange={(e) => setDecimals(e.target.value)}
@@ -259,34 +296,65 @@ function Home() {
             />
           )}
 
+          {/* Features */}
+          <div className="border rounded p-3 bg-gray-50">
+            <h3 className="text-sm font-semibold mb-2">Optional Features</h3>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="mintable" checked={modules.mintable} onChange={handleCheckboxChange} />
+                Mintable
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="burnable" checked={modules.burnable} onChange={handleCheckboxChange} />
+                Burnable
+              </label>
+              {(tokenType === "ERC721" || tokenType === "ERC1155") && (
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" name="pausable" checked={modules.pausable} onChange={handleCheckboxChange} />
+                  Pausable
+                </label>
+              )}
+            </div>
+          </div>
+
           <button
             onClick={handleTokenSubmit}
             disabled={tokenLoading}
             className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-60"
           >
-            {tokenLoading ? "Deploying token..." : "Deploy Token"}
+            {tokenLoading ? "Submitting deployment…" : "Deploy Token"}
           </button>
 
           {response && <p className="text-center text-sm">{response}</p>}
 
-          {tokenResult?.download && (
-            <a
-              href={`${API_BASE_URL}${tokenResult.download}`}
-              download
-              className="block text-center bg-blue-600 text-white py-2 rounded"
-            >
-              Download Deployment Artifacts (ZIP)
-            </a>
+          {tokenResult && (
+            <div className="mt-4 border rounded p-3 bg-gray-50 text-sm space-y-2">
+              {tokenResult.address && (
+                <div><strong>Contract Address:</strong> {tokenResult.address}</div>
+              )}
+              {tokenResult.txHash && (
+                <div><strong>Transaction:</strong> {tokenResult.txHash}</div>
+              )}
+              {tokenResult.network && (
+                <div><strong>Network:</strong> {tokenResult.network}</div>
+              )}
+              {tokenResult.download && (
+                <a
+                  href={`${API_BASE_URL}${tokenResult.download}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline text-blue-600"
+                >
+                  Download deployment bundle
+                </a>
+              )}
+            </div>
           )}
         </div>
 
-        {/* GENERATE CHAIN SCAFFOLD */}
+        {/* ---------------- Chain Scaffold ---------------- */}
         <div className="border rounded p-4 space-y-3">
           <h2 className="text-xl font-semibold">Generate Chain Scaffold</h2>
-          <p className="text-sm text-gray-600">
-            Generates a project scaffold and configuration files. This does not deploy or run a
-            live blockchain network.
-          </p>
 
           <input
             className="w-full p-2 border rounded"
@@ -309,24 +377,13 @@ function Home() {
             disabled={chainLoading}
             className="w-full bg-green-600 text-white py-2 rounded disabled:opacity-60"
           >
-            {chainLoading ? "Generating scaffold..." : "Generate Scaffold"}
+            {chainLoading ? "Generating scaffold…" : "Generate Scaffold"}
           </button>
-
-          {chainResult?.download && (
-            <a
-              href={`${API_BASE_URL}${chainResult.download}`}
-              download
-              className="block text-center bg-green-600 text-white py-2 rounded"
-            >
-              Download Scaffold (ZIP)
-            </a>
-          )}
         </div>
 
-        {/* ACTIVITY LOG */}
+        {/* ---------------- Activity Log ---------------- */}
         <div className="border rounded p-4">
           <h2 className="text-xl font-semibold">Activity Log</h2>
-
           {activityLog.length === 0 ? (
             <p className="text-sm text-gray-500">No activity recorded yet.</p>
           ) : (
@@ -347,19 +404,16 @@ function Home() {
   );
 }
 
+/* ---------------------------------------------------------------------
+ * App Router
+ * ------------------------------------------------------------------- */
 export default function App() {
   return (
     <Router>
       <div className="bg-black text-white px-4 py-3 flex gap-6">
-        <Link to="/" className="hover:underline">
-          Studio
-        </Link>
-        <Link to="/dashboard" className="hover:underline">
-          Operations
-        </Link>
-        <Link to="/deployments" className="hover:underline">
-          Deployments
-        </Link>
+        <Link to="/" className="hover:underline">Studio</Link>
+        <Link to="/dashboard" className="hover:underline">Operations</Link>
+        <Link to="/deployments" className="hover:underline">Deployments</Link>
       </div>
 
       <Routes>

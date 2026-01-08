@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 
 import Dashboard from "./dashboard/Dashboard";
 import Deployments from "./pages/Deployments";
@@ -421,6 +422,8 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/deployments" element={<Deployments />} />
       </Routes>
+
+      <Analytics />
     </Router>
   );
 }

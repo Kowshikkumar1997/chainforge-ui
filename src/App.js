@@ -5,6 +5,8 @@ import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Dashboard from "./dashboard/Dashboard";
 import Deployments from "./pages/Deployments";
 import { API_BASE_URL } from "./config";
+import { Analytics } from "@vercel/analytics/react";
+
 
 /**
  * ---------------------------------------------------------------------
@@ -421,6 +423,8 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/deployments" element={<Deployments />} />
       </Routes>
+      {/*  Vercel Analytics — render once at root */}
+      <Analytics />
     </Router>
   );
 }

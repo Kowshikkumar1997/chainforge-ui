@@ -243,6 +243,40 @@ function Home() {
         </div>
 
         {walletError && <p className="text-sm text-red-600">{walletError}</p>}
+        
+        {/* ---------------- Platform Intro ---------------- */}
+        <div className="border rounded p-5 bg-gray-50 shadow-sm space-y-3">
+          <h2 className="text-2xl font-semibold">What is ChainForge?</h2>
+          
+          <p className="text-gray-700 text-sm">
+            ChainForge is a backend-first blockchain infrastructure platform that enables deterministic smart contract generation, deployment, and auditability.
+            </p>
+            <p className="text-gray-600 text-sm">
+              This platform abstracts complex Solidity and deployment workflows into a controlled backend orchestration layer, ensuring reproducible and traceable blockchain deployments.
+              </p>
+              <div className="text-sm text-gray-700">
+                <strong>Capabilities:</strong>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>Deploy ERC20, ERC721, ERC1155 contracts</li>
+                  <li>Generate blockchain project scaffolds</li>
+                  <li>Download deployment artifacts and bundles</li>
+                  <li>Interact with deployed contracts through API</li>
+                  </ul>
+                  </div>
+                  
+                <div className="text-sm text-gray-700">
+                  <strong>Workflow:</strong>
+                  <ol className="list-decimal list-inside mt-1 space-y-1">
+                    <li>Select contract type and features</li>
+                    <li>Backend generates and deploys the contract</li>
+                    <li>Receive blockchain address and audit bundle</li>
+                    <li>Verify and integrate into applications</li>
+                    </ol>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      ChainForge is an infrastructure and developer tooling platform. It does not provide financial or investment services.
+                    </p>
+                    </div>
 
         {/* ---------------- Deploy Token ---------------- */}
         <div className="border rounded p-4 space-y-3">

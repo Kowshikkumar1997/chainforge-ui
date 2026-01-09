@@ -11,7 +11,7 @@ import axios from "axios";
  * This dashboard assumes contracts were generated and deployed via ChainForge.
  */
 
-import { API_BASE_URL } from "../config";
+const API_BASE_URL = "http://localhost:4000";
 
 const api = axios.create({
   baseURL: API_BASE_URL,

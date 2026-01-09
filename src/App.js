@@ -176,40 +176,44 @@ function Home() {
 
   /* ---------------- Generate Chain Scaffold ---------------- */
   const handleChainSubmit = async () => {
-    if (!chainName.trim()) {
-      setResponse("Project name is required.");
-      return;
+  if (!chainName.trim()) {
+    setChainResult({ message: "Project name is required." });
+    return;
+  }
+
+  setChainLoading(true);
+  setChainResult(null);
+
+  try {
+    const res = await api.post("/create-chain", {
+      chainName,
+      consensusType: consensus,
+      modules: Object.keys(modules).filter((m) => modules[m]),
+    });
+
+    setChainResult(res.data);
+
+    // Auto-download scaffold ZIP
+    if (res.data.download) {
+      const url = `${API_BASE_URL}${res.data.download}`;
+      window.open(url, "_blank");
     }
 
-    setChainLoading(true);
-    setResponse("");
-    setChainResult(null);
-
-    try {
-      const res = await api.post("/create-chain", {
-        chainName,
-        consensusType: consensus,
-        modules: Object.keys(modules).filter((m) => modules[m]),
-      });
-
-      setChainResult(res.data);
-      setResponse(res.data.message);
-
-      setActivityLog((prev) => [
-        {
-          type: "chain-scaffold",
-          label: `Chain scaffold generated: ${chainName}`,
-          timestamp: new Date().toISOString(),
-        },
-        ...prev,
-      ]);
-    } catch (err) {
-      console.error(err);
-      setResponse("Scaffold generation failed.");
-    } finally {
-      setChainLoading(false);
-    }
-  };
+    setActivityLog((prev) => [
+      {
+        type: "chain-scaffold",
+        label: `Chain scaffold generated: ${chainName}`,
+        timestamp: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+  } catch (err) {
+    console.error(err);
+    setChainResult({ message: "Scaffold generation failed." });
+  } finally {
+    setChainLoading(false);
+  }
+};
 
   /* -------------------------------------------------------------------
    * UI
@@ -380,6 +384,8 @@ function Home() {
             className="w-full bg-green-600 text-white py-2 rounded disabled:opacity-60"
           >
             {chainLoading ? "Generating scaffold…" : "Generate Scaffold"}
+            {chainResult && (<p className="text-center text-sm text-green-700">
+              {chainResult.message}</p>)}
           </button>
         </div>
 

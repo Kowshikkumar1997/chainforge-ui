@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 
 import Dashboard from "./dashboard/Dashboard";
 import Deployments from "./pages/Deployments";
+import About from "./pages/About";
 import { API_BASE_URL } from "./config";
 import { Analytics } from "@vercel/analytics/react";
 
@@ -243,42 +244,8 @@ function Home() {
         </div>
 
         {walletError && <p className="text-sm text-red-600">{walletError}</p>}
-        
-        {/* ---------------- Platform Intro ---------------- */}
-        <div className="border rounded p-5 bg-gray-50 shadow-sm space-y-3">
-          <h2 className="text-2xl font-semibold">What is ChainForge?</h2>
-          
-          <p className="text-gray-700 text-sm">
-            ChainForge is a backend-first blockchain infrastructure platform that enables deterministic smart contract generation, deployment, and auditability.
-            </p>
-            <p className="text-gray-600 text-sm">
-              This platform abstracts complex Solidity and deployment workflows into a controlled backend orchestration layer, ensuring reproducible and traceable blockchain deployments.
-              </p>
-              <div className="text-sm text-gray-700">
-                <strong>Capabilities:</strong>
-                <ul className="list-disc list-inside mt-1 space-y-1">
-                  <li>Deploy ERC20, ERC721, ERC1155 contracts</li>
-                  <li>Generate blockchain project scaffolds</li>
-                  <li>Download deployment artifacts and bundles</li>
-                  <li>Interact with deployed contracts through API</li>
-                  </ul>
-                  </div>
-                  
-                <div className="text-sm text-gray-700">
-                  <strong>Workflow:</strong>
-                  <ol className="list-decimal list-inside mt-1 space-y-1">
-                    <li>Select contract type and features</li>
-                    <li>Backend generates and deploys the contract</li>
-                    <li>Receive blockchain address and audit bundle</li>
-                    <li>Verify and integrate into applications</li>
-                    </ol>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      ChainForge is an infrastructure and developer tooling platform. It does not provide financial or investment services.
-                    </p>
-                    </div>
 
-        {/* ---------------- Deploy Token ---------------- */}
+    {/* ---------------- Deploy Token ---------------- */}
         <div className="border rounded p-4 space-y-3">
           <h2 className="text-xl font-semibold">Deploy Token</h2>
 
@@ -392,44 +359,87 @@ function Home() {
           )}
         </div>
 
-        {/* ---------------- Chain Scaffold ---------------- */}
-        <div className="border rounded p-4 space-y-3">
-          <h2 className="text-xl font-semibold">Generate Chain Scaffold</h2>
+ {/* ---------------- Chain Scaffold ---------------- */}
+<div className="border rounded p-4 space-y-3">
+  <h2 className="text-xl font-semibold">Generate Chain Scaffold</h2>
 
-          <input
-            className="w-full p-2 border rounded"
-            placeholder="Project Name"
-            value={chainName}
-            onChange={(e) => setChainName(e.target.value)}
-          />
+  <input
+    className="w-full p-2 border rounded"
+    placeholder="Project Name"
+    value={chainName}
+    onChange={(e) => setChainName(e.target.value)}
+  />
 
-          <select
-            className="w-full p-2 border rounded"
-            value={consensus}
-            onChange={(e) => setConsensus(e.target.value)}
-          >
-            <option value="Proof of Authority">Proof of Authority</option>
-            <option value="Proof of Stake">Proof of Stake</option>
-          </select>
+  <select
+    className="w-full p-2 border rounded"
+    value={consensus}
+    onChange={(e) => setConsensus(e.target.value)}
+  >
+    <option value="Proof of Authority">Proof of Authority</option>
+    <option value="Proof of Stake">Proof of Stake</option>
+  </select>
 
-          <button
-            onClick={handleChainSubmit}
-            disabled={chainLoading}
-            className="w-full bg-green-600 text-white py-2 rounded disabled:opacity-60"
-          >
-            {chainLoading ? "Generating scaffold…" : "Generate Scaffold"}
-            {chainResult && (<p className="text-center text-sm text-green-700">
-              {chainResult.message}</p>)}
-          </button>
-        </div>
+  <button
+    onClick={handleChainSubmit}
+    disabled={chainLoading}
+    className="w-full bg-green-600 text-white py-2 rounded disabled:opacity-60"
+  >
+    {chainLoading ? "Generating scaffold…" : "Generate Scaffold"}
+  </button>
 
-        {/* ---------------- Activity Log ---------------- */}
-        <div className="border rounded p-4">
-          <h2 className="text-xl font-semibold">Activity Log</h2>
-          {activityLog.length === 0 ? (
-            <p className="text-sm text-gray-500">No activity recorded yet.</p>
-          ) : (
-            <ul className="text-sm space-y-1">
+  {/* Status message */}
+  {chainResult?.message && (
+    <p className="text-center text-sm text-green-700">
+      {chainResult.message}
+    </p>
+  )}
+
+  {/* Manifest output */}
+  {chainResult?.manifest && (
+    <div className="mt-4 border rounded p-4 bg-gray-50 text-sm space-y-2">
+      <h3 className="text-lg font-semibold text-green-700">
+        Chain Scaffold Generated
+      </h3>
+
+      <div><strong>Project:</strong> {chainResult.manifest.project}</div>
+      <div><strong>Consensus:</strong> {chainResult.manifest.consensus}</div>
+
+      <div>
+        <strong>Modules:</strong>{" "}
+        {chainResult.manifest.modules.length
+          ? chainResult.manifest.modules.join(", ")
+          : "none"}
+      </div>
+
+      <div><strong>Version:</strong> {chainResult.manifest.version}</div>
+
+      <div>
+        <strong>Generated:</strong>{" "}
+        {new Date(chainResult.manifest.generatedAt).toLocaleString()}
+      </div>
+
+      {chainResult.download && (
+        <a
+          href={`${API_BASE_URL}${chainResult.download}`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-block mt-2 text-blue-600 underline"
+        >
+          Download Scaffold ZIP
+        </a>
+      )}
+    </div>
+  )}
+</div>
+
+ {/* ---------------- Activity Log ---------------- */}
+ 
+ <div className="border rounded p-4">
+   <h2 className="text-xl font-semibold">Activity Log</h2>
+    {activityLog.length === 0 ? (
+       <p className="text-sm text-gray-500">No activity recorded yet.</p>
+        ) : (
+          <ul className="text-sm space-y-1">
               {activityLog.map((item, i) => (
                 <li key={i}>
                   <span className="text-gray-600">
@@ -454,12 +464,14 @@ export default function App() {
     <Router>
       <div className="bg-black text-white px-4 py-3 flex gap-6">
         <Link to="/" className="hover:underline">Studio</Link>
+        <Link to="/about" className="hover:underline">About</Link>
         <Link to="/dashboard" className="hover:underline">Operations</Link>
         <Link to="/deployments" className="hover:underline">Deployments</Link>
       </div>
 
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/deployments" element={<Deployments />} />
       </Routes>

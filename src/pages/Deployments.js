@@ -4,12 +4,15 @@ import { API_BASE_URL } from "../config";
 /**
  * ChainForge — Deployment History
  *
- * This page renders an immutable audit trail of contracts deployed via the ChainForge backend.
+ * This component represents an immutable, verifiable audit ledger of
+ * smart contracts deployed through the ChainForge orchestration layer.
  *
- * Notes:
- * - Deployments are public blockchain events. However, the UI may optionally redact identifiers
- *   (contract address / transaction hash) when the platform is operated without user accounts.
- * - Explorer links are derived from the recorded network field to avoid hardcoding environment details.
+ * Core principles:
+ * - Backend is the single source of truth.
+ * - UI reflects persisted verification lifecycle state only.
+ * - No client-side mutation of deployment records.
+ * - Explorer links enable independent public verification.
+ * - Privacy Mode affects presentation only.
  */
 
 function shorten(value) {
@@ -19,23 +22,19 @@ function shorten(value) {
 }
 
 function safeString(value) {
-  if (value === null || value === undefined) return "-";
-  if (typeof value === "string" && value.trim().length === 0) return "-";
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string" && value.trim().length === 0) return "";
   return String(value);
 }
 
 function getExplorerBaseUrl(network) {
   const key = (network || "").toLowerCase();
-
-  // Extend safely as networks are added.
-  // Keep mappings explicit (avoid guessing URLs for unknown networks).
   const map = {
     sepolia: "https://sepolia.etherscan.io",
     mainnet: "https://etherscan.io",
     goerli: "https://goerli.etherscan.io",
     holesky: "https://holesky.etherscan.io",
   };
-
   return map[key] || null;
 }
 
@@ -50,111 +49,138 @@ export default function Deployments() {
   const [deployments, setDeployments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  // Default to privacy-on when there is no per-user access control.
   const [privacyMode, setPrivacyMode] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  /* -------------------------------------------------------
+     Load deployment history
+  ------------------------------------------------------- */
 
-    async function loadDeployments() {
+  useEffect(() => {
+    let mounted = true;
+
+    async function load() {
       setLoading(true);
       setError("");
 
       try {
         const res = await fetch(`${API_BASE_URL}/deployments`);
-
         if (!res.ok) {
           const text = await res.text();
-          throw new Error(`HTTP ${res.status}: ${text}`);
+          throw new Error(text);
         }
 
         const data = await res.json();
-        const list = Array.isArray(data?.records) ? data.records : [];
-
-        if (isMounted) {
-          setDeployments(list);
+        if (mounted) {
+          setDeployments(Array.isArray(data?.records) ? data.records : []);
         }
       } catch (err) {
         console.error("[deployments] load failed:", err);
-        if (isMounted) {
+        if (mounted) {
           setError("Unable to load deployment history.");
           setDeployments([]);
         }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     }
 
-    loadDeployments();
-
-    return () => {
-      isMounted = false;
-    };
+    load();
+    return () => (mounted = false);
   }, []);
 
+  /* -------------------------------------------------------
+     Trigger verification
+  ------------------------------------------------------- */
+
+  async function handleVerify(deploymentFile) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/verify-contract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deploymentFile }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text);
+      }
+
+      const reload = await fetch(`${API_BASE_URL}/deployments`);
+      const data = await reload.json();
+      setDeployments(Array.isArray(data?.records) ? data.records : []);
+    } catch (err) {
+      console.error("[verify] failed:", err);
+      alert("Verification request failed.");
+    }
+  }
+
+  /* -------------------------------------------------------
+     Normalize backend records for UI
+  ------------------------------------------------------- */
+
   const rows = useMemo(() => {
-    // Defensive normalization so the UI does not break if a field is missing.
     return deployments.map((d) => {
       const network = safeString(d?.network);
       const explorerBase = getExplorerBaseUrl(network);
 
-      const contractAddress = d?.contractAddress || "";
-      const txHash = d?.txHash || "";
-
-      const contractUrl =
-        explorerBase && contractAddress
-          ? `${explorerBase}/address/${contractAddress}`
-          : null;
-
-      const txUrl =
-        explorerBase && txHash ? `${explorerBase}/tx/${txHash}` : null;
+      const contractAddress = safeString(d?.contractAddress);
+      const txHash = safeString(d?.txHash);
 
       return {
-        tokenName: safeString(d?.tokenName),
+        file: d?.file,
+        tokenName: safeString(d?.token?.tokenName || d?.tokenName),
         tokenType: safeString(d?.tokenType),
         network,
         contractAddress,
         txHash,
-        verified: Boolean(d?.verified),
         deployedAt: d?.deployedAt || null,
-        contractUrl,
-        txUrl,
+
+        verificationStatus: safeString(d?.verificationStatus || "not_requested"),
+        verificationMessage: safeString(d?.verificationMessage),
+        etherscanUrl: safeString(d?.etherscanUrl),
+
+        contractUrl:
+          explorerBase && contractAddress
+            ? `${explorerBase}/address/${contractAddress}`
+            : null,
+
+        txUrl:
+          explorerBase && txHash
+            ? `${explorerBase}/tx/${txHash}`
+            : null,
       };
     });
   }, [deployments]);
 
+  /* -------------------------------------------------------
+     Render
+  ------------------------------------------------------- */
+
   return (
     <div className="min-h-screen bg-gray-100 px-6 py-8">
       <div className="max-w-6xl mx-auto bg-white rounded shadow p-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex justify-between items-start gap-4">
           <div>
             <h1 className="text-3xl font-bold mb-2">Deployment History</h1>
             <p className="text-sm text-gray-600">
-              This page provides a verifiable record of contracts deployed through
-              ChainForge. When enabled, Privacy Mode redacts identifiers from the UI
-              while preserving the audit log semantics.
+              This table represents a verifiable audit trail of smart contracts
+              deployed through the ChainForge orchestration layer.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-700 select-none">
-              <input
-                type="checkbox"
-                className="mr-2"
-                checked={privacyMode}
-                onChange={(e) => setPrivacyMode(e.target.checked)}
-              />
-              Privacy Mode
-            </label>
-          </div>
+          <label className="text-sm text-gray-700 select-none">
+            <input
+              type="checkbox"
+              className="mr-2"
+              checked={privacyMode}
+              onChange={(e) => setPrivacyMode(e.target.checked)}
+            />
+            Privacy Mode
+          </label>
         </div>
 
         <div className="mt-6">
           {loading && <p className="text-gray-600">Loading deployments…</p>}
-
           {error && <p className="text-red-600">{error}</p>}
 
           {!loading && !error && rows.length === 0 && (
@@ -171,7 +197,7 @@ export default function Deployments() {
                     <th className="text-left p-3">Network</th>
                     <th className="text-left p-3">Contract</th>
                     <th className="text-left p-3">Transaction</th>
-                    <th className="text-left p-3">Verified</th>
+                    <th className="text-left p-3">Verification</th>
                     <th className="text-left p-3">Deployed At</th>
                   </tr>
                 </thead>
@@ -197,7 +223,7 @@ export default function Deployments() {
                             {shorten(d.contractAddress)}
                           </a>
                         ) : (
-                          <span className="text-gray-500">-</span>
+                          "-"
                         )}
                       </td>
 
@@ -215,12 +241,62 @@ export default function Deployments() {
                             {shorten(d.txHash)}
                           </a>
                         ) : (
-                          <span className="text-gray-500">-</span>
+                          "-"
                         )}
                       </td>
 
                       <td className="p-3">
-                        {d.verified ? "Verified" : "Unverified"}
+                        {d.verificationStatus === "verified" && (
+                          <a
+                            href={d.etherscanUrl || d.contractUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-green-600 font-semibold hover:underline"
+                          >
+                            Verified
+                          </a>
+                        )}
+
+                        {d.verificationStatus === "pending" && (
+                          <span className="text-yellow-600 font-semibold">
+                            Pending…
+                          </span>
+                        )}
+
+                        {d.verificationStatus === "submitting" && (
+                          <span className="text-blue-600 font-semibold">
+                            Submitting…
+                          </span>
+                        )}
+
+                        {d.verificationStatus === "retryable" && (
+                          <button
+                            onClick={() => handleVerify(d.file)}
+                            className="text-orange-600 underline hover:text-orange-800"
+                            title={d.verificationMessage}
+                          >
+                            Retry
+                          </button>
+                        )}
+
+                        {d.verificationStatus === "failed" && (
+                          <button
+                            onClick={() => handleVerify(d.file)}
+                            className="text-red-600 underline hover:text-red-800"
+                            title={d.verificationMessage}
+                          >
+                            Failed — Retry
+                          </button>
+                        )}
+
+                        {d.verificationStatus === "not_requested" && (
+                          <button
+                            onClick={() => handleVerify(d.file)}
+                            className="text-blue-600 underline hover:text-blue-800"
+                          >
+                            Verify
+                          </button>
+                        )}
                       </td>
 
                       <td className="p-3">{formatDate(d.deployedAt)}</td>
@@ -231,8 +307,7 @@ export default function Deployments() {
 
               {!privacyMode && (
                 <p className="text-xs text-gray-500 mt-3">
-                  Explorer links are provided for independent verification. Contract
-                  identifiers are public by nature; Privacy Mode only affects UI display.
+                  Explorer links are provided for independent public verification.
                 </p>
               )}
             </div>
